@@ -8,6 +8,8 @@
 
 ### Qué hace
 
+- Interfaz de escritorio: biblioteca con búsqueda a la izquierda, tarjetas S1/S2/S3 y cadena de efectos clicable. Selecciona un bloque para editar sus controles; «Nombre y tempo» despliega los datos del preset.
+- Las pestañas «Editor», «Medidor y balance» y «Comparar» separan las tareas sin perder la sesión. «Preparar medición» abre el medidor con la escena vinculada.
 - Muestra RMS y picos en dBFS, y avisa cuando las muestras llegan al límite digital.
 - Mide tomas de 12 segundos, después de 3 segundos de preparación.
 - Compara cada preset/escena con una referencia por perfil de guitarra: JZ o P90.

@@ -7,18 +7,70 @@ const program = () => Number($('studioPreset').value);
 const scene = () => $('studioScene').value;
 const note = text => $('studioStatus').textContent = text;
 const selected = () => documentDraft.describe(program());
+function setView(name) {
+  for (const view of document.querySelectorAll('.workspace-view')) view.hidden = view.id !== `view-${name}`;
+  for (const button of document.querySelectorAll('[data-view]')) button.setAttribute('aria-pressed', String(button.dataset.view === name));
+}
+for (const button of document.querySelectorAll('[data-view]')) button.onclick = () => setView(button.dataset.view);
+const blockNames = { CMP: 'Compresor', EFX: 'Drive', AMP: 'Amplificador', IR: 'Cabina / IR', EQ: 'Ecualizador', MOD: 'Modulación', DLY: 'Delay', RVB: 'Reverb', NR: 'Noise gate' };
+function showNavigation() {
+  const preset = selected(), current = preset.scenes[Number(scene()[1]) - 1];
+  $('presetHeading').textContent = `${preset.slot} ${preset.name}`;
+  for (const button of $('presetList').children) {
+    const active = Number(button.dataset.program) === program();
+    button.setAttribute('aria-pressed', String(active));
+    if (active) button.textContent = `${preset.slot}  ${preset.name}${unsaved.has(program()) ? ' •' : ''}`;
+  }
+  $('sceneTabs').replaceChildren(...['S1', 'S2', 'S3'].map((name, index) => {
+    const button = document.createElement('button'); button.type = 'button';
+    button.className = 'scene-tab'; button.setAttribute('aria-pressed', String(name === scene()));
+    const title = document.createElement('strong'); title.textContent = `${name} · Escena ${index + 1}`;
+    const detail = document.createElement('small');
+    detail.textContent = preset.scenes[index].chain.filter(key => preset.scenes[index].blocks[key]?.enabled).join(' · ');
+    button.append(title, detail);
+    button.onclick = () => { $('studioScene').value = name; showScene(); };
+    return button;
+  }));
+  $('studioChain').replaceChildren(...current.chain.map(name => {
+    const block = current.blocks[name], button = document.createElement('button'); button.type = 'button';
+    button.className = `effect-block${block?.enabled ? '' : ' bypassed'}`;
+    button.setAttribute('aria-pressed', String(name === $('studioBlock').value));
+    const title = document.createElement('strong'); title.textContent = name;
+    const model = document.createElement('small'); model.textContent = block?.model || name;
+    const state = document.createElement('span'); state.textContent = block?.enabled ? '● ACTIVO' : '○ BYPASS';
+    button.append(title, model, state);
+    button.onclick = () => { $('studioBlock').value = name; showParameters(); };
+    return button;
+  }));
+}
+// Keep the existing validated controls; only move them into an editor workspace.
+const sidebar = document.createElement('aside'); sidebar.className = 'preset-sidebar';
+const libraryTitle = document.createElement('h2'); libraryTitle.textContent = 'Mis presets';
+const search = document.createElement('input'); search.type = 'search'; search.placeholder = 'Buscar preset…'; search.setAttribute('aria-label', 'Buscar preset');
+const list = document.createElement('div'); list.id = 'presetList'; list.className = 'preset-list';
+search.oninput = () => { for (const button of list.children) button.hidden = !button.textContent.toLowerCase().includes(search.value.toLowerCase()); };
+sidebar.append(libraryTitle, search, list);
+$('view-editor').prepend(sidebar);
+const heading = document.createElement('h2'); heading.id = 'presetHeading'; heading.textContent = 'Abre tu banco de presets';
+$('studioTitle').replaceWith(heading);
+const presetSettings = document.createElement('details'); presetSettings.className = 'preset-settings';
+const settingsTitle = document.createElement('summary'); settingsTitle.textContent = 'Nombre y tempo del preset';
+presetSettings.append(settingsTitle, document.querySelector('.editor-name'));
+$('sceneTabs').before(presetSettings);
 function changed(redraw = true) {
   unsaved.add(program()); proposals = []; $('studioApplyBalance').disabled = true;
   const preset = selected();
   $('studioPreset').selectedOptions[0].textContent = `${preset.slot} ${preset.name} · editado`;
   window.dispatchEvent(new CustomEvent('patch-edited', { detail: preset }));
   note('Borrador actualizado. Exporta una copia e impórtala en QuickTone para escuchar los cambios.');
-  if (redraw) showScene();
+  if (redraw) showScene(); else showNavigation();
 }
 function attempt(action) { try { action(); } catch (error) { note(error.message); } }
 function showParameters() {
+  showNavigation();
   const blockName = $('studioBlock').value, block = selected().scenes[Number(scene()[1]) - 1].blocks[blockName];
   const metadata = catalog.models.find(model => model.block === blockName && model.id === block.modelId);
+  $('blockTitle').textContent = `${blockNames[blockName] || blockName} · ${block.model}`;
   $('studioEnabled').checked = block.enabled;
   const options = catalog.models.filter(model => model.block === blockName && Number.isInteger(model.id) && model.id >= 1 && model.id <= 63 && !model.special && model.parameters.length && model.parameters.every(p => p.editable && p.index < catalog.layout[blockName].capacity && p.default >= p.min && p.default <= p.max));
   if (!options.some(model => model.id === block.modelId)) options.unshift({ id: block.modelId, name: `${block.model} · conservar controles especiales` });
@@ -46,7 +98,6 @@ function showScene() {
   const previous = $('studioBlock').value;
   $('studioBlock').replaceChildren(...current.chain.map(name => new Option(name, name)));
   $('studioBlock').value = current.chain.includes(previous) ? previous : 'AMP';
-  $('studioChain').textContent = current.chain.join(' → ');
   showParameters();
 }
 async function load(bytes, source) {
@@ -55,6 +106,13 @@ async function load(bytes, source) {
   documentDraft = next; unsaved = new Set(); proposals = [];
   $('studioFields').disabled = false;
   $('studioPreset').replaceChildren(...next.presets.map(preset => new Option(`${preset.slot} ${preset.name}`, preset.program)));
+  list.replaceChildren(...next.presets.map(preset => {
+    const button = document.createElement('button'); button.type = 'button'; button.dataset.program = preset.program;
+    button.textContent = `${preset.slot}  ${preset.name}`;
+    button.onclick = () => { $('studioPreset').value = preset.program; showScene(); };
+    return button;
+  }));
+  search.value = '';
   $('studioSource').textContent = `${source} · ${next.presets.length} presets. Borrador local: no se conecta por MIDI.`;
   $('studioExportBank').disabled = next.presets.length !== 128;
   $('studioApplyBalance').disabled = true;
@@ -98,6 +156,7 @@ $('studioMeasure').onclick = async () => {
   try {
     const preset = selected();
     window.dispatchEvent(new CustomEvent('measure-editor-scene', { detail: { program: program(), scene: scene(), preset: `${preset.slot} ${preset.name}`, family: /\bP90\b/i.test(preset.name) ? 'P90' : /\bJZ\b/i.test(preset.name) ? 'JZ' : $('family').value, patchFingerprint: await documentDraft.fingerprint(program(), scene()) } }));
+    setView('meter');
     $('captureTitle').scrollIntoView({ behavior: 'smooth', block: 'center' });
   } catch (error) { note(error.message); }
 };

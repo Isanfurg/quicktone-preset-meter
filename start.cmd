@@ -1,7 +1,7 @@
 @echo off
 cd /d "%~dp0"
-if exist "release\0.2.0\QuickTone Preset Studio-win32-x64\QuickTone Preset Studio.exe" (
-  start "" "release\0.2.0\QuickTone Preset Studio-win32-x64\QuickTone Preset Studio.exe"
+if exist "release\0.3.0\QuickTone Preset Studio-win32-x64\QuickTone Preset Studio.exe" (
+  start "" "release\0.3.0\QuickTone Preset Studio-win32-x64\QuickTone Preset Studio.exe"
   exit /b 0
 )
 where node >nul 2>nul

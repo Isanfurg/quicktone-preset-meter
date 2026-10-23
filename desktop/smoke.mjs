@@ -34,6 +34,16 @@ try {
     const ready = document.getElementById('studioEditor').dataset.ready;
     if (ready !== 'true') throw new Error('Editor source not loaded: ' + ready);
     if (!window.presetDesktop?.savePatch) throw new Error('Desktop preload missing');
+    if (document.getElementById('view-editor').hidden || !document.getElementById('view-meter').hidden) throw new Error('Editor should be the initial workspace');
+    const scenes = document.querySelectorAll('#sceneTabs button');
+    if (scenes.length !== 3 || document.querySelectorAll('#presetList button').length !== 1) throw new Error('Scene/preset navigation missing');
+    scenes[1].click();
+    if (document.getElementById('studioScene').value !== 'S2') throw new Error('Scene card selection failed');
+    document.querySelectorAll('#sceneTabs button')[0].click();
+    const effect = [...document.querySelectorAll('#studioChain button')].find(button => button.querySelector('strong').textContent === 'EQ');
+    effect.click();
+    if (document.getElementById('studioBlock').value !== 'EQ') throw new Error('Effect selection failed');
+    [...document.querySelectorAll('#studioChain button')].find(button => button.querySelector('strong').textContent === 'AMP').click();
     const gain = document.querySelector('input[aria-label="GAIN valor"]');
     if (!gain || gain.value !== '42') throw new Error('Gain not decoded');
     gain.value = '47'; gain.dispatchEvent(new Event('change'));
@@ -43,6 +53,8 @@ try {
     document.getElementById('studioMeasure').click();
     await new Promise(resolve => setTimeout(resolve, 100));
     if (document.getElementById('confirmPatch').disabled || document.getElementById('preset').value !== '08B JZ SMOKE') throw new Error('Measurement binding failed');
+    if (document.getElementById('view-meter').hidden) throw new Error('Prepare measurement should open meter');
+    document.querySelector('[data-view="editor"]').click();
     const { PatchDocument } = await import('/patch-editor.mjs');
     const response = await fetch('/api/patch-source'); const binary = new Uint8Array(await response.arrayBuffer());
     const draft = new PatchDocument(binary); draft.setParameter(29, 'S2', 'AMP', 'GAIN', 46);
@@ -54,6 +66,7 @@ try {
     return { editor: true, preload: true, binding: true, writer: true, audioWorklet: true };
   })()`, true);
   console.log('DESKTOP_SMOKE_OK ' + JSON.stringify(result));
+  if (process.env.PRESET_STUDIO_SCREENSHOT) await writeFile(process.env.PRESET_STUDIO_SCREENSHOT, (await window.webContents.capturePage()).toPNG());
 } catch (error) { console.error('DESKTOP_SMOKE_FAILED ' + error.stack); code = 1; }
 finally {
   clearTimeout(watchdog);
