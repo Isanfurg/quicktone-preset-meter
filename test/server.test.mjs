@@ -16,7 +16,7 @@ test('local server serves only app files, validates writes, and persists session
   const port = probe.address().port; await new Promise(resolve => probe.close(resolve));
   let child;
   try {
-    for (const file of ['server.mjs', 'meter.mjs', 'index.html', 'app.mjs', 'worklet.mjs', 'style.css', 'patch-reader.mjs', 'patch-viewer.mjs', 'patch-catalog.mjs']) await cp(path.join(root, file), path.join(folder, file));
+    for (const file of ['server.mjs', 'meter.mjs', 'index.html', 'app.mjs', 'worklet.mjs', 'style.css', 'patch-reader.mjs', 'patch-viewer.mjs', 'patch-catalog.mjs', 'patch-editor.mjs', 'editor-ui.mjs']) await cp(path.join(root, file), path.join(folder, file));
     child = spawn(process.execPath, ['server.mjs'], { cwd: folder, env: { ...process.env, QUICKTONE_METER_PORT: String(port) }, stdio: ['ignore', 'pipe', 'pipe'] });
     await Promise.race([once(child.stdout, 'data'), once(child, 'error').then(([error]) => { throw error; }), new Promise((_, reject) => { const timer = setTimeout(() => reject(new Error('Server startup timed out')), 5000); timer.unref(); })]);
     const url = `http://127.0.0.1:${port}`;
@@ -24,7 +24,7 @@ test('local server serves only app files, validates writes, and persists session
     assert.equal(page.status, 200);
     assert.match(await page.text(), /Balance de presets/);
     assert.match(page.headers.get('content-security-policy'), /default-src 'self'/);
-    for (const file of ['/app.mjs', '/worklet.mjs', '/meter.mjs', '/style.css', '/patch-reader.mjs', '/patch-viewer.mjs', '/patch-catalog.mjs']) assert.equal((await fetch(url + file)).status, 200);
+    for (const file of ['/app.mjs', '/worklet.mjs', '/meter.mjs', '/style.css', '/patch-reader.mjs', '/patch-viewer.mjs', '/patch-catalog.mjs', '/patch-editor.mjs', '/editor-ui.mjs']) assert.equal((await fetch(url + file)).status, 200);
     assert.deepEqual(await (await fetch(url + '/api/preset-snapshot')).json(), { version: 1, presets: [] });
     assert.equal((await fetch(url + '/presets.private.json')).status, 404);
     assert.equal((await fetch(url + '/server.mjs')).status, 404);

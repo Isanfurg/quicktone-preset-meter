@@ -1,6 +1,6 @@
-# QuickTone Preset Meter
+# QuickTone Preset Studio
 
-**Free, local, open-source guitar preset level matching.** Compare scenes against a reference without touching the mixing desk between songs. Spanish interface; works with any audio input exposed by the browser, not only NUX hardware.
+**Free, local, open-source desktop preset editing and measured level matching.** Edit supported MG-30 files, compare three scenes, and propose output-level adjustments from real guitar measurements. Spanish interface. The repository retains its original `quicktone-preset-meter` name.
 
 [Español](#español) · [English](#english) · [Technical notes](#technical-notes) · [MIT license](LICENSE)
 
@@ -15,6 +15,9 @@
 - Comprueba si ese aumento dejaría margen para los picos.
 - Conserva el historial localmente y lo exporta a CSV.
 - No reproduce, almacena ni sube el audio. No modifica QuickTone ni la pedalera.
+- Abre un banco o preset MG-30 compatible y edita sus tres escenas: modelos numéricos compatibles, parámetros, bypass, nombre, BPM y copia entre escenas.
+- Exporta presets individuales o bancos como copias, conservando los bytes originales de IR/NAM y otros recursos.
+- Propone balance medido mediante LEVEL de 6-BAND EQ activo. Aplica únicamente después de revisar la tabla y solo al borrador.
 
 No lee Gain/Master en vivo desde USB ni cambia presets automáticamente. El visor sí muestra los valores guardados en archivos exportados compatibles. Las sugerencias no equivalen a puntos de una perilla: cambia un poco el nivel de salida y vuelve a medir.
 
@@ -32,12 +35,24 @@ Para precargar tu propia exportación al abrir la página, ejecuta `node import-
 
 ### Requisitos e inicio
 
-1. Instala [Node.js](https://nodejs.org/) 20 o superior.
-2. Descarga o clona este repositorio y abre una terminal en su carpeta.
-3. Ejecuta `npm start` (o `node server.mjs`). **No hace falta `npm install`: no hay dependencias.**
-4. Abre [http://127.0.0.1:8787](http://127.0.0.1:8787) en Chrome o Edge de escritorio.
+**Aplicación de escritorio para Windows 10/11 x64:** descarga el ZIP de [Releases](https://github.com/Isanfurg/quicktone-preset-meter/releases), extrae toda la carpeta y abre `QuickTone Preset Studio.exe`. Conserva los archivos que acompañan al ejecutable. No necesitas Node.js para la versión empaquetada. El binario comunitario no está firmado con un certificado comercial.
 
-En Windows puedes abrir `start.cmd`. Para cerrar el servidor, usa Ctrl+C en su terminal.
+**Desde código:** instala [Node.js](https://nodejs.org/) 22.12 o superior, clona el repositorio, ejecuta `npm ci` y después `npm start`. Electron abre una ventana independiente. `npm run build` genera la carpeta de Windows x64 en `release/`. Si ya existe, muévela antes de volver a empaquetar: el build no la sobrescribe.
+
+**Modo navegador opcional:** `npm run web` o `node server.mjs` y abre `http://127.0.0.1:8787` en Chrome/Edge. El servidor web puede ejecutarse sin instalar dependencias con Node.js 20+. Para cerrarlo usa Ctrl+C. `start.cmd` abre el ejecutable compilado si está disponible.
+
+### Editar y aplicar balance
+
+1. Exporta tu banco actual desde QuickTone y ábrelo en «Editar presets». Trabaja siempre sobre un respaldo.
+2. Elige preset, escena y bloque. Los controles especiales no validados se conservan en solo lectura. Cambiar de modelo aplica sus valores numéricos iniciales; los modelos que requieren recursos/controles especiales no se ofrecen como sustitutos.
+3. Exporta una copia editada e impórtala con QuickTone. La aplicación nunca envía cambios a la NUX por MIDI.
+4. Pulsa «Preparar medición de esta escena». Confirma que esa misma versión está cargada y seleccionada en la pedalera. Toca el riff y fija la referencia del perfil correspondiente.
+5. Mide las demás escenas. «Calcular propuestas» muestra ajustes, exclusiones y motivos. «Aplicar propuestas al borrador» cambia LEVEL del EQ de seis bandas en pasos de 0.3 dB.
+6. Exporta, importa en QuickTone y vuelve a medir. No se presume que el resultado ya quedó calibrado.
+
+Cada toma vinculada conserva una huella SHA-256 de su escena y recursos. Si el borrador cambió después, no se aplica una toma vieja. Las mediciones manuales anteriores sin huella siguen sirviendo como comparación, pero no generan cambios automáticos. Tampoco se aplican ajustes con clipping, falta de señal/margen, entradas incompatibles, EQ apagado/no compatible o diferencias mayores de 6 dB. El EQ debe estar después del ampli, drive y compresor.
+
+Este balance usa mediciones, no una IA externa ni suscripciones. No escucha por sí solo lo que significa «más cálido»: la decisión de EQ/tono sigue siendo tuya. La conversión dB solo está comprobada para 6-BAND EQ: raw 50=0 dB, 57=+2.1 dB, 60=+3 dB, 63=+3.9 dB en la instalación v6.0.5 observada. No se convierte Master/Gain a dB.
 
 ### Conectar la MG-30
 
@@ -72,7 +87,7 @@ El programa solicita desactivar ganancia automática, reducción de ruido y canc
 
 ### Datos y privacidad
 
-El servidor escucha solo en `127.0.0.1`. No hay cuentas, analítica ni servicios externos. Se guarda `session.json` junto al programa: nombres de presets, dispositivo, fechas, perfil y estadísticas; **no muestras de audio**. Este archivo y los CSV están excluidos de Git. Haz una copia del archivo para respaldar una sesión. La sesión admite hasta 300 tomas; antes de iniciar otra, respalda y mueve manualmente `session.json` con el servidor cerrado.
+El servidor escucha solo en `127.0.0.1`. No hay cuentas, analítica ni servicios externos. En escritorio los datos se guardan en `%APPDATA%/QuickTonePresetStudio`; en modo web, junto al programa. `session.json` contiene nombres, dispositivo, fechas, perfil y estadísticas; **no muestras de audio**. Los archivos privados y CSV están excluidos de Git y del ejecutable. Haz una copia para respaldar una sesión. La sesión admite hasta 300 tomas; antes de iniciar otra, respalda y mueve manualmente `session.json` con la aplicación cerrada. Los cambios del borrador se conservan exportándolos; al cerrar se avisa si quedan cambios sin exportar.
 
 No expongas el servidor a Internet. El permiso de audio se concede manualmente y se libera al desconectar o cerrar la página. Cambiar entre `localhost` y `127.0.0.1` puede pedir permiso de nuevo: conserva la misma dirección.
 
@@ -80,7 +95,9 @@ No expongas el servidor a Internet. El permiso de audio se concede manualmente y
 
 ### Run
 
-Requires Node.js 20+ and desktop Chrome or Edge. Run `npm start` or `node server.mjs`, then open `http://127.0.0.1:8787`. No installation of npm dependencies is needed. On Windows, double-click `start.cmd`.
+Windows 10/11 x64: download the portable ZIP from Releases, extract the entire folder and run `QuickTone Preset Studio.exe`. No Node.js installation is needed for the packaged app. The community executable is not commercially code-signed.
+
+From source: Node.js 22.12+, `npm ci`, then `npm start`. Run `npm run build` to package Windows x64. Optional browser mode: `npm run web` at `http://127.0.0.1:8787`; that server alone needs only Node.js 20+.
 
 Connect your modeler/interface over USB, select its **processed** output rather than the dry DI path, and grant audio input permission in the browser. The app never monitors audio back to your speakers.
 
@@ -93,7 +110,9 @@ Connect your modeler/interface over USB, select its **processed** output rather 
 5. Follow the suggested **output-level change in dB**, then measure again. The suggestion is not a Gain/Master knob position.
 6. Repeat the reference if the input path, guitar controls or capture settings change.
 
-The read-only file viewer also compares all three scenes from supported QuickTone `.mg30patch` exports. It does not open MIDI, upload files or modify hardware. Imported files are snapshots, not a live view. Only observed 9902-byte records and full 128-record banks are accepted; unknown models remain raw and special control values are not converted into unverified physical units.
+The editor and comparison viewer work on all three scenes of supported QuickTone `.mg30patch` exports. They do not open MIDI, upload files or modify hardware. Export new copies and import them through QuickTone. Original IR/NAM payload bytes are preserved. Only observed 9902-byte records and full 128-record banks are accepted; unknown/special controls stay read-only.
+
+Measured auto-balance changes only the calibrated output LEVEL of an enabled six-band EQ, after the amp/drive/compressor. Capture a scene through the editor, confirm that exact version is loaded on the pedal, then measure. SHA-256 fingerprints reject stale takes after edits. Review proposals before applying them, export/import and measure again. Unsupported EQ, clipping, insufficient signal/headroom, incompatible contexts, and changes exceeding 6 dB are refused. This is local signal-based assistance, not a paid AI service.
 
 This is a gated RMS meter, not a calibrated loudness or true-peak meter. EQ and compression affect perceived volume. Finish by ear. It cannot detect clipping that occurred upstream of an attenuated signal. Browser/device processing and physical gain changes may not always be detectable.
 
@@ -101,21 +120,23 @@ Only measurement metadata/statistics are saved to a local `session.json`; audio 
 
 ## Technical notes
 
-- Native Web Audio API / AudioWorklet, plain HTML/CSS/JavaScript, Node standard library server.
+- Electron desktop shell, native Web Audio API / AudioWorklet, plain HTML/CSS/JavaScript, Node standard library server. Electron and Packager are development/build dependencies; the editor and meter do not call cloud APIs.
 - Stereo measurement averages channel energy rather than summing waveforms, preserving out-of-phase signal power.
 - Each take retains its sample-peak and clipping count, plus active and total audio duration.
 - Suggested adjustment = reference RMS + lead offset − measured RMS. Suggestions are withheld for incompatible capture contexts, insufficient active signal, declared automatic processing, or clipping.
 - Persistence validates the data shape and limits request/session size. Requests from other origins or unexpected Host headers are rejected; writes use a temporary file followed by rename. Only app assets and the session API are served.
-- No MIDI, automatic preset changes, firmware updates, LUFS, audio recording, or live internal-gain reading in this version. Gain/Master and other stored parameters can be viewed from supported exported files.
+- No MIDI, automatic hardware preset changes, firmware updates, LUFS, audio recording, or live internal-gain reading in this version. Supported stored parameters are editable; only validated numeric controls can be written.
 
 ### Development
 
 ```sh
 npm test
+npm run test:desktop
+npm run build
 npm start
 ```
 
-Tests cover known signal levels, out-of-phase stereo, gating, clipping, channel selection, reference comparisons, headroom prediction, validation and local HTTP boundaries. Browser microphone permission and real hardware routing require a manual check.
+Tests cover known signal levels, out-of-phase stereo, gating, clipping, channel selection, reference comparisons, headroom prediction, file editing, exact resource preservation, stale/double balance application, validation and local HTTP boundaries. The desktop smoke test checks the actual Electron window, preload, editor, measurement binding, writer and an AudioWorklet with a synthetic oscillator; it does not represent real guitar calibration. Microphone permission, real hardware routing and importing a newly edited file into QuickTone require a manual check.
 
 To use a different port, set `QUICKTONE_METER_PORT`, e.g. PowerShell: `$env:QUICKTONE_METER_PORT=8788` then `npm start`.
 

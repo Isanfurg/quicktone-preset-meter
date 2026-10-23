@@ -43,6 +43,13 @@ function refresh() {
   if (entries.length) show();
 }
 $('patchSelect').onchange = show;
+window.addEventListener('patch-edited', event => {
+  const preset = { ...event.detail, source: 'BORRADOR DEL EDITOR · sin aplicar a la NUX' };
+  const at = entries.findIndex(item => item.program === preset.program);
+  if (at >= 0) entries[at] = preset; else entries.push(preset);
+  refresh(); $('patchSelect').value = String(at >= 0 ? at : entries.length - 1); show();
+  $('patchNotice').textContent = 'Vista del borrador local del editor. Exporta e importa en QuickTone para aplicar los cambios a la pedalera.';
+});
 $('patchFiles').onchange = async () => {
   const files = [...$('patchFiles').files];
   if (!files.length) return;

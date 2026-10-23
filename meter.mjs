@@ -49,6 +49,8 @@ export function validTake(take) {
     ['S1', 'S2', 'S3'].includes(take.scene) && typeof take.context === 'string' && take.context.length < 1000 &&
     typeof take.input === 'string' && take.input.length < 300 && typeof take.date === 'string' &&
     typeof take.processing === 'boolean' &&
+    (take.program === undefined || Number.isInteger(take.program) && take.program >= 0 && take.program < 128) &&
+    (take.patchFingerprint === undefined || typeof take.patchFingerprint === 'string' && /^[0-9a-f]{64}$/.test(take.patchFingerprint)) &&
     ['rmsDb', 'peakDb', 'activeSeconds', 'seconds', 'clipped', 'offset'].every(key => Number.isFinite(take[key])) &&
     take.rmsDb >= -120 && take.rmsDb <= 12 && take.peakDb >= -120 && take.peakDb <= 12 &&
     take.seconds >= 0 && take.seconds < 120 && take.activeSeconds >= 0 && take.activeSeconds <= take.seconds + 0.1 &&

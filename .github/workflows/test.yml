@@ -15,3 +15,18 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: npm test
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run test:desktop
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quicktone-preset-studio-windows-x64
+          path: release/0.2.0/QuickTone Preset Studio-win32-x64/

@@ -5,6 +5,7 @@ session.json.tmp
 *.mg30patch
 *.csv
 node_modules/
+release/
 *.log
 .env
 .DS_Store

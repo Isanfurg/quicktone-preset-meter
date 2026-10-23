@@ -5,7 +5,8 @@ const names = ['CLEAN FUNK', 'ROCK', 'AMBIENT', '8D', 'POP CHORUS', 'EDGE BLUES'
 let session = { version: 1, takes: [], references: {} };
 let audio, stream, source, meter, settings, capture, countdown, snapshot, generation = 0, blocks = [], channels = 0, saving = Promise.resolve(), loading = true;
 let latestId, clipUntil = 0;
-const controls = ['device', 'channel', 'family', 'preset', 'scene', 'offset', 'gate'];
+let binding;
+const controls = ['device', 'channel', 'family', 'preset', 'scene', 'offset', 'gate', 'confirmPatch'];
 const number = value => Number.isFinite(value) && value > -119 ? value.toFixed(1) : '−∞';
 const signed = value => `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(1)} dB`;
 const reference = family => session.takes.find(t => t.id === session.references[family]);
@@ -29,6 +30,7 @@ function busy(value) {
   $('cancel').disabled = !value;
   $('connect').disabled = value;
   $('reference').disabled = value || !latest();
+  if (!binding) $('confirmPatch').disabled = true;
 }
 function contextualSettings() {
   return JSON.stringify({ device: settings.deviceId || stream.getAudioTracks()[0].label, rate: audio.sampleRate, channel: $('channel').value, gate: Number($('gate').value), ec: settings.echoCancellation, agc: settings.autoGainControl, ns: settings.noiseSuppression });
@@ -169,10 +171,12 @@ function startCapture() {
   if (!audio || audio.state !== 'running' || !channels) { message('Primero conecta audio y comprueba que llegue señal.'); return; }
   const gate = Number($('gate').value), offset = Number($('offset').value);
   if (!$('preset').value.trim()) { message('Escribe o selecciona el nombre del preset antes de medir.'); return; }
+  if (binding && !$('confirmPatch').checked) { message('Confirma que cargaste y seleccionaste esta misma versión en la NUX antes de medir.'); return; }
   if (!Number.isFinite(gate) || gate < -80 || gate > -30 || !Number.isFinite(offset) || offset < 0 || offset > 6) { message('Revisa el umbral (−80 a −30) y el objetivo (0 a 6 dB).'); return; }
   if ($('channel').value === 'right' && channels < 2) { message('Esta entrada entrega solo un canal. Usa Izquierdo / mono.'); return; }
   if (session.takes.length >= 300) { message('La sesión llegó a 300 tomas. Exporta CSV para conservar los resultados.'); return; }
   snapshot = { family: $('family').value, preset: $('preset').value, scene: $('scene').value, offset, gate, context: contextualSettings(), input: `${stream.getAudioTracks()[0].label} · ${$('channel').selectedOptions[0].textContent}`, processing: ['echoCancellation', 'noiseSuppression', 'autoGainControl'].some(key => settings[key] === true) };
+  if (binding) { snapshot.program = binding.program; snapshot.patchFingerprint = binding.patchFingerprint; }
   busy(true); blocks = []; let seconds = 3;
   $('timer').textContent = 'Prepárate… 3'; $('progressFill').style.width = '0%';
   message('Cambia al preset y escena elegidos. No muevas la consola ni la entrada USB.');
@@ -212,6 +216,16 @@ $('export').onclick = () => {
   const link = document.createElement('a'); link.href = url; link.download = 'quicktone-niveles.csv'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 window.addEventListener('beforeunload', () => stream?.getTracks().forEach(track => track.stop()));
+function clearBinding() { binding = undefined; $('confirmPatch').checked = false; $('confirmPatch').disabled = true; $('bindingStatus').textContent = 'Sin versión vinculada. Prepara una medición desde el editor para usar balance automático.'; }
+for (const id of ['family', 'scene', 'preset']) $(id).addEventListener(id === 'preset' ? 'input' : 'change', clearBinding);
+window.addEventListener('patch-edited', () => { if (capture || countdown) abort('La versión del preset cambió durante la toma. Vuelve a medir.'); clearBinding(); });
+window.addEventListener('measure-editor-scene', event => {
+  if (capture || countdown) { message('Termina o cancela la toma actual antes de preparar otra escena.'); return; }
+  const detail = event.detail;
+  $('family').value = detail.family; presets(); $('preset').value = detail.preset; $('scene').value = detail.scene; $('offset').value = detail.scene === 'S3' ? 2 : 0;
+  binding = detail; $('confirmPatch').disabled = false; $('confirmPatch').checked = false;
+  $('bindingStatus').textContent = `${detail.preset} · ${detail.scene} vinculado al borrador. Confirma que esa versión está cargada en la pedalera.`;
+});
 presets();
 try {
   const response = await fetch('/api/session');

@@ -1,6 +1,21 @@
 {
   "name": "quicktone-meter",
   "private": true,
+  "version": "0.2.0",
+  "description": "Desktop MG-30 preset editor and measured level balancing",
+  "license": "MIT",
+  "main": "desktop/main.mjs",
   "type": "module",
-  "scripts": { "start": "node server.mjs", "test": "node --test" }
+  "scripts": {
+    "start": "node desktop/launch.mjs",
+    "web": "node server.mjs",
+    "postinstall": "install-electron",
+    "build": "node desktop/build.mjs",
+    "test:desktop": "node desktop/launch.mjs --smoke-test",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "45.0.0"
+  }
 }
