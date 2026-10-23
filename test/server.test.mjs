@@ -22,7 +22,7 @@ test('local server serves only app files, validates writes, and persists session
     const url = `http://127.0.0.1:${port}`;
     const page = await fetch(url);
     assert.equal(page.status, 200);
-    assert.match(await page.text(), /Balance de presets/);
+    assert.match(await page.text(), /QuickTone Preset Studio/);
     assert.match(page.headers.get('content-security-policy'), /default-src 'self'/);
     for (const file of ['/app.mjs', '/worklet.mjs', '/meter.mjs', '/style.css', '/patch-reader.mjs', '/patch-viewer.mjs', '/patch-catalog.mjs', '/patch-editor.mjs', '/editor-ui.mjs']) assert.equal((await fetch(url + file)).status, 200);
     assert.deepEqual(await (await fetch(url + '/api/preset-snapshot')).json(), { version: 1, presets: [] });

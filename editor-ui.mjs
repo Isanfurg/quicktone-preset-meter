@@ -53,6 +53,7 @@ sidebar.append(libraryTitle, search, list);
 $('view-editor').prepend(sidebar);
 const heading = document.createElement('h2'); heading.id = 'presetHeading'; heading.textContent = 'Abre tu banco de presets';
 $('studioTitle').replaceWith(heading);
+$('studioEditor').setAttribute('aria-labelledby', 'presetHeading');
 const presetSettings = document.createElement('details'); presetSettings.className = 'preset-settings';
 const settingsTitle = document.createElement('summary'); settingsTitle.textContent = 'Nombre y tempo del preset';
 presetSettings.append(settingsTitle, document.querySelector('.editor-name'));
