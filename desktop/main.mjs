@@ -27,10 +27,11 @@ else {
     if (smoke) console.log('SMOKE_STAGE server');
     window = new BrowserWindow({ width: 1330, height: 920, minWidth: 850, minHeight: 620, backgroundColor: '#101514', title: 'QuickTone Preset Studio', show: false, webPreferences: { preload: path.join(root, 'desktop/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
     const trusted = url => { try { return new URL(url).origin === local.url; } catch { return false; } };
-    session.defaultSession.setPermissionCheckHandler((webContents, permission, origin, details) => webContents === window.webContents && trusted(origin) && ((permission === 'media' && details.mediaType === 'audio' && audioAllowed) || (permission === 'midi' && midiAllowed)));
+    session.defaultSession.setPermissionCheckHandler((webContents, permission, origin, details) => webContents === window.webContents && trusted(origin) && ((permission === 'media' && details.mediaType === 'audio' && audioAllowed) || (['midi', 'midiSysex'].includes(permission) && midiAllowed)));
     session.defaultSession.setPermissionRequestHandler(async (webContents, permission, callback, details) => {
-      if (webContents === window.webContents && trusted(details.requestingUrl) && permission === 'midi') {
-        const result = await dialog.showMessageBox(window, { type: 'question', title: 'Seguimiento MIDI', message: '¿Permitir leer los cambios de preset y escena por MIDI?', detail: 'Solo se escucha la entrada NUX. No se envían comandos ni se solicita SysEx. Mantén QuickTone cerrado.', buttons: ['Permitir MIDI', 'Cancelar'], defaultId: 0, cancelId: 1 });
+      // Electron 45 requests midiSysex even when requestMIDIAccess uses sysex:false.
+      if (webContents === window.webContents && trusted(details.requestingUrl) && details.isMainFrame && ['midi', 'midiSysex'].includes(permission)) {
+        const result = await dialog.showMessageBox(window, { type: 'question', title: 'Seguimiento MIDI', message: '¿Permitir acceso MIDI para seguir preset y escena?', detail: 'Electron solicita un permiso MIDI ampliado. Esta aplicación solo abre la entrada NUX; no abre salidas ni envía comandos y usa sysex:false. Mantén QuickTone cerrado.', buttons: ['Permitir MIDI', 'Cancelar'], defaultId: 0, cancelId: 1 });
         midiAllowed = result.response === 0; callback(midiAllowed); return;
       }
       if (webContents !== window.webContents || !trusted(details.requestingUrl) || permission !== 'media' || !details.mediaTypes?.length || details.mediaTypes.some(type => type !== 'audio')) { callback(false); return; }

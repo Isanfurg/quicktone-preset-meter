@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog } from 'electron';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -28,6 +28,12 @@ try {
   console.log('SMOKE_STAGE window');
   const window = BrowserWindow.getAllWindows()[0]; assert.ok(window);
   if (window.webContents.isLoading()) await new Promise(resolve => window.webContents.once('did-finish-load', resolve));
+  const originalDialog = dialog.showMessageBox; let midiPrompt = false;
+  dialog.showMessageBox = async (_window, options) => { midiPrompt = options.title === 'Seguimiento MIDI'; return { response: 1 }; };
+  try {
+    const permission = await window.webContents.executeJavaScript("navigator.requestMIDIAccess({sysex:false,software:false}).then(()=> 'allowed').catch(()=> 'denied')", true);
+    assert.equal(permission, 'denied'); assert.equal(midiPrompt, true, 'Real Electron MIDI permission must reach the explicit consent dialog');
+  } finally { dialog.showMessageBox = originalDialog; }
   const result = await window.webContents.executeJavaScript(`(async () => {
     const deadline = Date.now() + 8000;
     while (!document.getElementById('studioEditor').dataset.ready && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 50));

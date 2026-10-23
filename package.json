@@ -1,7 +1,7 @@
 {
   "name": "quicktone-meter",
   "private": true,
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Desktop MG-30 preset editor and measured level balancing",
   "license": "MIT",
   "main": "desktop/main.mjs",
