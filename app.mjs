@@ -5,7 +5,7 @@ const names = ['CLEAN FUNK', 'ROCK', 'AMBIENT', '8D', 'POP CHORUS', 'EDGE BLUES'
 let session = { version: 1, takes: [], references: {} };
 let audio, stream, source, meter, settings, capture, countdown, snapshot, generation = 0, blocks = [], channels = 0, saving = Promise.resolve(), loading = true;
 let latestId, clipUntil = 0;
-let binding;
+let binding, midiAwaitingScene = false;
 const controls = ['device', 'channel', 'family', 'preset', 'scene', 'offset', 'gate', 'confirmPatch'];
 const number = value => Number.isFinite(value) && value > -119 ? value.toFixed(1) : '−∞';
 const signed = value => `${value >= 0 ? '+' : '−'}${Math.abs(value).toFixed(1)} dB`;
@@ -168,6 +168,7 @@ function onBlock(block) {
   render(); save();
 }
 function startCapture() {
+  if (midiAwaitingScene) { message('Falta identificar la escena MIDI. Cambia de escena en la NUX o detén el seguimiento para elegirla manualmente.'); return; }
   if (!audio || audio.state !== 'running' || !channels) { message('Primero conecta audio y comprueba que llegue señal.'); return; }
   const gate = Number($('gate').value), offset = Number($('offset').value);
   if (!$('preset').value.trim()) { message('Escribe o selecciona el nombre del preset antes de medir.'); return; }
@@ -217,6 +218,21 @@ $('export').onclick = () => {
 };
 window.addEventListener('beforeunload', () => stream?.getTracks().forEach(track => track.stop()));
 function clearBinding() { binding = undefined; $('confirmPatch').checked = false; $('confirmPatch').disabled = true; $('bindingStatus').textContent = 'Sin versión vinculada. Prepara una medición desde el editor para usar balance automático.'; }
+window.addEventListener('nux-midi-change', event => {
+  if (capture || countdown) abort('Cambió el estado MIDI durante la toma. Selecciona la escena y vuelve a medir.');
+  clearBinding();
+  const { program, scene } = event.detail;
+  midiAwaitingScene = Number.isInteger(program) && !scene;
+  if (Number.isInteger(program)) {
+    const options = [...$('studioPreset').options], option = options.find(item => Number(item.value) === program);
+    if (option) {
+      const name = option.textContent.replace(/ · editado$/, '');
+      const family = /\bP90\b/i.test(name) ? 'P90' : /\bJZ\b/i.test(name) ? 'JZ' : $('family').value;
+      $('family').value = family; presets(); $('preset').value = name;
+    } else $('preset').value = `${Math.floor(program / 4) + 1}${'ABCD'[program % 4]}`;
+  }
+  if (scene) { $('scene').value = scene; $('offset').value = scene === 'S3' ? 2 : 0; }
+});
 for (const id of ['family', 'scene', 'preset']) $(id).addEventListener(id === 'preset' ? 'input' : 'change', clearBinding);
 window.addEventListener('patch-edited', () => { if (capture || countdown) abort('La versión del preset cambió durante la toma. Vuelve a medir.'); clearBinding(); });
 window.addEventListener('measure-editor-scene', event => {

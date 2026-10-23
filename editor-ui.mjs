@@ -1,6 +1,8 @@
 import catalog from './patch-catalog.mjs';
 import { PatchDocument, proposeBalance, applyBalance, eqDb } from './patch-editor.mjs';
 import { suggestions, applyRecipe } from './effect-recipes.mjs';
+import { gearArt } from './gear-art.mjs';
+import { followMidi } from './midi-follow.mjs';
 
 const $ = id => document.getElementById(id);
 let documentDraft, proposals = [], unsaved = new Set();
@@ -40,7 +42,7 @@ function showNavigation() {
     const title = document.createElement('strong'); title.textContent = name;
     const model = document.createElement('small'); model.textContent = block?.model || name;
     const state = document.createElement('span'); state.textContent = block?.enabled ? '● ACTIVO' : '○ BYPASS';
-    button.append(title, model, state);
+    button.append(gearArt(name, block?.modelId), title, model, state);
     button.onclick = () => { $('studioBlock').value = name; showParameters(); };
     return button;
   }));
@@ -56,6 +58,35 @@ $('view-editor').prepend(sidebar);
 const heading = document.createElement('h2'); heading.id = 'presetHeading'; heading.textContent = 'Abre tu banco de presets';
 $('studioTitle').replaceWith(heading);
 $('studioEditor').setAttribute('aria-labelledby', 'presetHeading');
+const gearPreview = document.createElement('div'); gearPreview.id = 'gearPreview'; gearPreview.className = 'gear-preview';
+document.querySelector('.block-heading').prepend(gearPreview);
+const midiTools = document.createElement('div'); midiTools.className = 'midi-tools';
+const midiButton = document.createElement('button'); midiButton.id = 'followMidi'; midiButton.className = 'secondary'; midiButton.textContent = 'Seguir NUX · MIDI';
+const midiStatus = document.createElement('span'); midiStatus.id = 'midiStatus'; midiStatus.className = 'small'; midiStatus.setAttribute('role', 'status'); midiStatus.textContent = 'Solo lectura · QuickTone cerrado';
+midiTools.append(midiButton, midiStatus); $('studioSource').after(midiTools);
+let stopMidi, midiProgram, midiScene;
+midiButton.onclick = async () => {
+  midiButton.disabled = true;
+  try {
+    if (stopMidi) { await stopMidi(); stopMidi = undefined; midiButton.textContent = 'Seguir NUX · MIDI'; midiStatus.textContent = 'Seguimiento MIDI detenido'; window.dispatchEvent(new CustomEvent('nux-midi-change', { detail: {} })); return; }
+    midiProgram = midiScene = undefined;
+    stopMidi = await followMidi(detail => {
+      if (detail.program !== undefined) { midiProgram = detail.program; midiScene = undefined; }
+      if (detail.scene) midiScene = detail.scene;
+      const slot = midiProgram === undefined ? 'Preset aún desconocido' : `${String(Math.floor(midiProgram / 4) + 1).padStart(2, '0')}${'ABCD'[midiProgram % 4]}`;
+      midiStatus.textContent = `NUX: ${slot} · ${midiScene || 'escena por detectar'} · nombre desde archivo`;
+      window.dispatchEvent(new CustomEvent('nux-midi-change', { detail: { program: midiProgram, scene: midiScene } }));
+      if (!documentDraft?.records.has(midiProgram)) { if (midiProgram !== undefined) note(`${slot} no está en el archivo abierto. Abre tu banco completo para seguirlo.`); return; }
+      $('studioPreset').value = midiProgram;
+      if (midiScene) $('studioScene').value = midiScene;
+      showScene();
+      note(`Seguimiento MIDI: ${slot}, ${midiScene || 'falta detectar escena'}. Los controles muestran el archivo, no una lectura de parámetros en vivo.`);
+    }, text => { midiProgram = midiScene = undefined; midiStatus.textContent = text; window.dispatchEvent(new CustomEvent('nux-midi-change', { detail: {} })); });
+    midiButton.textContent = 'Detener MIDI';
+  } catch (error) { midiStatus.textContent = `No se pudo conectar MIDI: ${error.message}. Cierra QuickTone y vuelve a intentar.`; }
+  finally { midiButton.disabled = false; }
+};
+window.addEventListener('beforeunload', () => { stopMidi?.(); });
 const presetSettings = document.createElement('details'); presetSettings.className = 'preset-settings';
 const settingsTitle = document.createElement('summary'); settingsTitle.textContent = 'Nombre y tempo del preset';
 presetSettings.append(settingsTitle, document.querySelector('.editor-name'));
@@ -112,6 +143,7 @@ function showParameters() {
   const blockName = $('studioBlock').value, block = selected().scenes[Number(scene()[1]) - 1].blocks[blockName];
   const metadata = catalog.models.find(model => model.block === blockName && model.id === block.modelId);
   $('blockTitle').textContent = `${blockNames[blockName] || blockName} · ${block.model}`;
+  gearPreview.replaceChildren(gearArt(blockName, block.modelId));
   $('studioEnabled').checked = block.enabled;
   const options = catalog.models.filter(model => model.block === blockName && Number.isInteger(model.id) && model.id >= 1 && model.id <= 63 && !model.special && model.parameters.length && model.parameters.every(p => p.editable && p.index < catalog.layout[blockName].capacity && p.default >= p.min && p.default <= p.max));
   if (!options.some(model => model.id === block.modelId)) options.unshift({ id: block.modelId, name: `${block.model} · conservar controles especiales` });

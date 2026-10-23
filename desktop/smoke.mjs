@@ -45,6 +45,19 @@ try {
     if (document.getElementById('studioBlock').value !== 'EQ') throw new Error('Effect selection failed');
     [...document.querySelectorAll('#studioChain button')].find(button => button.querySelector('strong').textContent === 'AMP').click();
     if (document.getElementById('effectRecipe').options.length !== 3) throw new Error('Amp suggestions missing');
+    if (document.querySelectorAll('#studioChain svg').length !== 12 || !document.querySelector('#gearPreview svg')) throw new Error('Gear illustrations missing');
+    const fakePort = { id: 'smoke-nux', name: 'NUX MG-30', state: 'connected', async open() {}, async close() {} };
+    Object.defineProperty(navigator, 'requestMIDIAccess', { configurable: true, value: async options => {
+      if (options.sysex) throw new Error('SysEx should never be requested');
+      return { inputs: new Map([['smoke-nux', fakePort]]) };
+    }});
+    document.getElementById('followMidi').click(); await new Promise(resolve => setTimeout(resolve, 30));
+    fakePort.onmidimessage({ data: [0xc0, 29] }); fakePort.onmidimessage({ data: [0xb0, 0x50, 1] });
+    if (document.getElementById('studioScene').value !== 'S2' || document.getElementById('scene').value !== 'S2') throw new Error('MIDI scene following failed');
+    if (!document.getElementById('confirmPatch').disabled) throw new Error('MIDI must not confirm patch version');
+    document.getElementById('followMidi').click(); await new Promise(resolve => setTimeout(resolve, 30));
+    if (fakePort.onmidimessage !== null) throw new Error('MIDI disconnect failed');
+    document.querySelectorAll('#sceneTabs button')[0].click();
     document.getElementById('applyEffectRecipe').click();
     if (document.querySelector('input[aria-label="GAIN valor"]').value !== '22') throw new Error('Recipe not applied');
     document.getElementById('undoEffectRecipe').click();
@@ -69,7 +82,9 @@ try {
     const osc = audio.createOscillator(), node = new AudioWorkletNode(audio, 'preset-meter');
     const sample = new Promise((resolve, reject) => { const timeout = setTimeout(() => reject(new Error('Audio worklet timeout')), 3000); node.port.onmessage = event => { if (event.data.energy > 0) { clearTimeout(timeout); resolve(event.data); } }; });
     osc.connect(node).connect(audio.destination); osc.start(); await audio.resume(); await sample; osc.stop(); await audio.close();
-    return { editor: true, preload: true, binding: true, writer: true, audioWorklet: true };
+    document.querySelector('[data-view="editor"]').click(); window.scrollTo(0, 0);
+    await new Promise(resolve => setTimeout(resolve, 150));
+    return { editor: true, preload: true, binding: true, writer: true, audioWorklet: true, midiFollow: true, gearArt: true };
   })()`, true);
   console.log('DESKTOP_SMOKE_OK ' + JSON.stringify(result));
   if (process.env.PRESET_STUDIO_SCREENSHOT) await writeFile(process.env.PRESET_STUDIO_SCREENSHOT, (await window.webContents.capturePage()).toPNG());

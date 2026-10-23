@@ -10,7 +10,7 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 app.setName('QuickTone Preset Studio');
 const smoke = process.argv.includes('--smoke-test');
 app.setPath('userData', smoke && process.env.PRESET_STUDIO_TEST_DIR ? process.env.PRESET_STUDIO_TEST_DIR : path.join(app.getPath('appData'), 'QuickTonePresetStudio'));
-let window, local, audioAllowed = false;
+let window, local, audioAllowed = false, midiAllowed = false;
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on('second-instance', () => { if (window?.isMinimized()) window.restore(); window?.show(); window?.focus(); });
@@ -27,8 +27,12 @@ else {
     if (smoke) console.log('SMOKE_STAGE server');
     window = new BrowserWindow({ width: 1330, height: 920, minWidth: 850, minHeight: 620, backgroundColor: '#101514', title: 'QuickTone Preset Studio', show: false, webPreferences: { preload: path.join(root, 'desktop/preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false } });
     const trusted = url => { try { return new URL(url).origin === local.url; } catch { return false; } };
-    session.defaultSession.setPermissionCheckHandler((webContents, permission, origin, details) => webContents === window.webContents && trusted(origin) && permission === 'media' && details.mediaType === 'audio' && audioAllowed);
+    session.defaultSession.setPermissionCheckHandler((webContents, permission, origin, details) => webContents === window.webContents && trusted(origin) && ((permission === 'media' && details.mediaType === 'audio' && audioAllowed) || (permission === 'midi' && midiAllowed)));
     session.defaultSession.setPermissionRequestHandler(async (webContents, permission, callback, details) => {
+      if (webContents === window.webContents && trusted(details.requestingUrl) && permission === 'midi') {
+        const result = await dialog.showMessageBox(window, { type: 'question', title: 'Seguimiento MIDI', message: '¿Permitir leer los cambios de preset y escena por MIDI?', detail: 'Solo se escucha la entrada NUX. No se envían comandos ni se solicita SysEx. Mantén QuickTone cerrado.', buttons: ['Permitir MIDI', 'Cancelar'], defaultId: 0, cancelId: 1 });
+        midiAllowed = result.response === 0; callback(midiAllowed); return;
+      }
       if (webContents !== window.webContents || !trusted(details.requestingUrl) || permission !== 'media' || !details.mediaTypes?.length || details.mediaTypes.some(type => type !== 'audio')) { callback(false); return; }
       const result = await dialog.showMessageBox(window, { type: 'question', title: 'Entrada de audio', message: '¿Permitir que el medidor escuche tu entrada de audio?', detail: 'La señal se mide localmente. No se graba ni se envía a Internet.', buttons: ['Permitir audio', 'Cancelar'], defaultId: 0, cancelId: 1 });
       audioAllowed = result.response === 0; callback(audioAllowed);

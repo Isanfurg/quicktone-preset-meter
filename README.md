@@ -9,6 +9,8 @@
 ### Qué hace
 
 - Interfaz de escritorio: biblioteca con búsqueda a la izquierda, tarjetas S1/S2/S3 y cadena de efectos clicable. Selecciona un bloque para editar sus controles; «Nombre y tempo» despliega los datos del preset.
+- Ilustraciones vectoriales originales de amplis, pedales, EQ y pedales de expresión, sin imágenes ni marcas de terceros. El dibujo identifica la familia; el nombre de modelo sigue siendo la referencia exacta.
+- «Seguir NUX · MIDI» escucha cambios de preset y escena con QuickTone cerrado. Acepta el permiso MIDI y cambia de preset y escena en la pedalera para establecer el estado inicial. Solo abre una entrada NUX, sin salidas ni SysEx. Observado en firmware 6.0.5: Program Change canal 1 y CC80, valores 0/1/2 para S1/S2/S3. Los nombres y parámetros vienen del archivo abierto; MIDI no confirma su versión. Una toma se cancela si cambia el estado MIDI.
 - Las pestañas «Editor», «Medidor y balance» y «Comparar» separan las tareas sin perder la sesión. «Preparar medición» abre el medidor con la escena vinculada.
 - «Puntos de partida» sugiere ajustes para drive (Tube/Blues, crunch, rock, boost, solo), ampli, delay (corto, largo, TAP 1/8D, ambient), reverb (Room, Plate, Hall, Shimmer), modulación, compresor, EQ y gate. Muestra modelo y valores antes de aplicar y permite deshacer la última sugerencia mientras no hagas otra edición. Solo cambia el bloque de la escena seleccionada; no equilibra su volumen automáticamente. Si cambia el modelo, sus demás controles cargan los valores base. Son recetas iniciales en valores brutos, no calibración acústica ni tiempos en milisegundos.
 - Muestra RMS y picos en dBFS, y avisa cuando las muestras llegan al límite digital.
@@ -113,7 +115,7 @@ Connect your modeler/interface over USB, select its **processed** output rather 
 5. Follow the suggested **output-level change in dB**, then measure again. The suggestion is not a Gain/Master knob position.
 6. Repeat the reference if the input path, guitar controls or capture settings change.
 
-The editor and comparison viewer work on all three scenes of supported QuickTone `.mg30patch` exports. They do not open MIDI, upload files or modify hardware. Export new copies and import them through QuickTone. Original IR/NAM payload bytes are preserved. Only observed 9902-byte records and full 128-record banks are accepted; unknown/special controls stay read-only.
+The editor and comparison viewer work on all three scenes of supported QuickTone `.mg30patch` exports. Optional MIDI following listens to one NUX input only (channel 1 Program Change and CC80 scene messages observed on firmware 6.0.5). Keep QuickTone closed and switch preset/scene to initialize it. No MIDI outputs or SysEx are used. Names and controls still come from your file; following does not confirm the patch version. No files are uploaded and no hardware settings are changed. Export new copies and import them through QuickTone. Original IR/NAM payload bytes are preserved. Only observed 9902-byte records and full 128-record banks are accepted; unknown/special controls stay read-only. Original SVG gear illustrations identify device families rather than claiming exact hardware appearance.
 
 Measured auto-balance changes only the calibrated output LEVEL of an enabled six-band EQ, after the amp/drive/compressor. Capture a scene through the editor, confirm that exact version is loaded on the pedal, then measure. SHA-256 fingerprints reject stale takes after edits. Review proposals before applying them, export/import and measure again. Unsupported EQ, clipping, insufficient signal/headroom, incompatible contexts, and changes exceeding 6 dB are refused. This is local signal-based assistance, not a paid AI service.
 
@@ -128,7 +130,7 @@ Only measurement metadata/statistics are saved to a local `session.json`; audio 
 - Each take retains its sample-peak and clipping count, plus active and total audio duration.
 - Suggested adjustment = reference RMS + lead offset − measured RMS. Suggestions are withheld for incompatible capture contexts, insufficient active signal, declared automatic processing, or clipping.
 - Persistence validates the data shape and limits request/session size. Requests from other origins or unexpected Host headers are rejected; writes use a temporary file followed by rename. Only app assets and the session API are served.
-- No MIDI, automatic hardware preset changes, firmware updates, LUFS, audio recording, or live internal-gain reading in this version. Supported stored parameters are editable; only validated numeric controls can be written.
+- No outgoing MIDI, automatic hardware preset changes, firmware updates, LUFS, audio recording, or live internal-gain reading in this version. MIDI input follows preset/scene only; supported stored parameters are editable and only validated numeric controls can be written.
 
 ### Development
 

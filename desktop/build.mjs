@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const stage = await mkdtemp(path.join(tmpdir(), 'preset-studio-build-'));
 try {
-  const files = ['index.html', 'style.css', 'app.mjs', 'meter.mjs', 'worklet.mjs', 'server.mjs', 'patch-reader.mjs', 'patch-viewer.mjs', 'patch-catalog.mjs', 'patch-editor.mjs', 'effect-recipes.mjs', 'editor-ui.mjs', 'LICENSE', 'README.md'];
+  const files = ['index.html', 'style.css', 'app.mjs', 'meter.mjs', 'worklet.mjs', 'server.mjs', 'patch-reader.mjs', 'patch-viewer.mjs', 'patch-catalog.mjs', 'patch-editor.mjs', 'effect-recipes.mjs', 'gear-art.mjs', 'midi-follow.mjs', 'editor-ui.mjs', 'LICENSE', 'README.md'];
   for (const file of files) await cp(path.join(root, file), path.join(stage, file));
   await mkdir(path.join(stage, 'desktop'));
   for (const file of ['main.mjs', 'preload.cjs']) await cp(path.join(root, 'desktop', file), path.join(stage, 'desktop', file));
