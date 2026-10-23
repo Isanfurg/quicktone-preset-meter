@@ -44,6 +44,12 @@ try {
     effect.click();
     if (document.getElementById('studioBlock').value !== 'EQ') throw new Error('Effect selection failed');
     [...document.querySelectorAll('#studioChain button')].find(button => button.querySelector('strong').textContent === 'AMP').click();
+    if (document.getElementById('effectRecipe').options.length !== 3) throw new Error('Amp suggestions missing');
+    document.getElementById('applyEffectRecipe').click();
+    if (document.querySelector('input[aria-label="GAIN valor"]').value !== '22') throw new Error('Recipe not applied');
+    document.getElementById('undoEffectRecipe').click();
+    if (document.querySelector('input[aria-label="GAIN valor"]').value !== '42') throw new Error('Recipe undo failed');
+    document.getElementById('studioReset').click();
     const gain = document.querySelector('input[aria-label="GAIN valor"]');
     if (!gain || gain.value !== '42') throw new Error('Gain not decoded');
     gain.value = '47'; gain.dispatchEvent(new Event('change'));

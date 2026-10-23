@@ -6,7 +6,7 @@ import { validSession } from './meter.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const assets = { '/': ['index.html', 'text/html'], '/app.mjs': ['app.mjs', 'text/javascript'], '/meter.mjs': ['meter.mjs', 'text/javascript'], '/worklet.mjs': ['worklet.mjs', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
-for (const name of ['patch-reader.mjs', 'patch-viewer.mjs', 'patch-catalog.mjs', 'patch-editor.mjs', 'editor-ui.mjs']) assets['/' + name] = [name, 'text/javascript'];
+for (const name of ['patch-reader.mjs', 'patch-viewer.mjs', 'patch-catalog.mjs', 'patch-editor.mjs', 'effect-recipes.mjs', 'editor-ui.mjs']) assets['/' + name] = [name, 'text/javascript'];
 export async function startServer({ port = 8787, dataDir = root } = {}) {
 const sessionPath = path.join(dataDir, 'session.json');
 let writing = false;

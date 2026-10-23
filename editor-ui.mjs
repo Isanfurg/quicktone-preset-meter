@@ -1,8 +1,10 @@
 import catalog from './patch-catalog.mjs';
 import { PatchDocument, proposeBalance, applyBalance, eqDb } from './patch-editor.mjs';
+import { suggestions, applyRecipe } from './effect-recipes.mjs';
 
 const $ = id => document.getElementById(id);
 let documentDraft, proposals = [], unsaved = new Set();
+let recipeUndo;
 const program = () => Number($('studioPreset').value);
 const scene = () => $('studioScene').value;
 const note = text => $('studioStatus').textContent = text;
@@ -58,7 +60,45 @@ const presetSettings = document.createElement('details'); presetSettings.classNa
 const settingsTitle = document.createElement('summary'); settingsTitle.textContent = 'Nombre y tempo del preset';
 presetSettings.append(settingsTitle, document.querySelector('.editor-name'));
 $('sceneTabs').before(presetSettings);
+const recipePanel = document.createElement('section'); recipePanel.className = 'recipe-panel';
+const recipeTitle = document.createElement('h3'); recipeTitle.textContent = 'Puntos de partida';
+const recipeSelect = document.createElement('select'); recipeSelect.id = 'effectRecipe'; recipeSelect.setAttribute('aria-label', 'Sugerencia de sonido');
+const recipeDescription = document.createElement('p'); recipeDescription.className = 'small';
+const recipeValues = document.createElement('p'); recipeValues.className = 'recipe-values small';
+const recipeActions = document.createElement('div'); recipeActions.className = 'actions';
+const recipeApply = document.createElement('button'); recipeApply.id = 'applyEffectRecipe'; recipeApply.textContent = 'Aplicar a esta escena';
+const recipeBack = document.createElement('button'); recipeBack.id = 'undoEffectRecipe'; recipeBack.className = 'secondary'; recipeBack.textContent = 'Deshacer sugerencia';
+recipeActions.append(recipeApply, recipeBack);
+recipePanel.append(recipeTitle, recipeSelect, recipeDescription, recipeValues, recipeActions);
+$('studioParameters').after(recipePanel);
+function showSuggestions() {
+  const block = $('studioBlock').value, model = selected().scenes[Number(scene()[1]) - 1].blocks[block];
+  const items = suggestions(block, model.modelId);
+  recipeSelect.replaceChildren(...items.map(item => new Option(item.title, item.id)));
+  recipeSelect.hidden = recipeApply.hidden = !items.length;
+  const preview = () => {
+    const item = items.find(item => item.id === recipeSelect.value);
+    const target = catalog.models.find(m => m.block === block && m.id === item?.model);
+    const guides = { WAH: 'Wah: deja bypass para sonidos normales y actívalo para frases expresivas. El recorrido y la asignación del pedal se configuran en QuickTone.', IR: 'Cabina / IR: compara usando el mismo riff y volumen. El carácter depende del IR cargado; conserva el recurso original y cambia sus controles especiales desde QuickTone.', SR: 'Send / Return: úsalo solo si tienes equipo conectado al loop. Revisa los niveles de envío y retorno en QuickTone.', VOL: 'Pedal de volumen: antes del delay y la reverb permite swells con colas; después recorta también las colas. Configura recorrido y posición en QuickTone.' };
+    recipeDescription.textContent = item?.description || guides[block] || 'Este modelo no tiene una receta validada. Conserva sus ajustes y revisa sus controles en QuickTone.';
+    recipeValues.textContent = item ? `${target.name} · ${Object.entries(item.values).map(([key, value]) => `${key} ${value}`).join(' · ')}${item.dotted ? ' · 1/8D' : ''}. ${item.model !== model.modelId ? 'Cambia el modelo y carga sus valores base; ' : ''}activa el bloque únicamente en ${scene()}. Valores brutos, no ms ni dB; vuelve a medir el volumen.` : '';
+  };
+  recipeSelect.onchange = preview; preview();
+  recipeBack.disabled = !recipeUndo;
+}
+recipeApply.onclick = () => attempt(() => {
+  const before = documentDraft.exportPreset(program()), targetProgram = program();
+  const item = applyRecipe(documentDraft, targetProgram, scene(), $('studioBlock').value, recipeSelect.value);
+  changed(); recipeUndo = { program: targetProgram, before }; recipeBack.disabled = false;
+  note(`${item.title} aplicado a ${scene()} en el borrador. Exporta a QuickTone y comprueba tono y volumen.`);
+});
+recipeBack.onclick = () => attempt(() => {
+  if (!recipeUndo) return;
+  const undo = recipeUndo; documentDraft.records.set(undo.program, undo.before);
+  $('studioPreset').value = undo.program; changed(); note('Sugerencia deshecha. Se conservaron los ajustes anteriores.');
+});
 function changed(redraw = true) {
+  recipeUndo = undefined; recipeBack.disabled = true;
   unsaved.add(program()); proposals = []; $('studioApplyBalance').disabled = true;
   const preset = selected();
   $('studioPreset').selectedOptions[0].textContent = `${preset.slot} ${preset.name} · editado`;
@@ -92,6 +132,7 @@ function showParameters() {
     value.onchange = () => attempt(() => { documentDraft.setParameter(program(), scene(), blockName, parameter.name, Number(value.value)); range.value = value.value; describe(Number(value.value)); changed(false); });
     row.append(title, range, value, detail); return row;
   }));
+  showSuggestions();
 }
 function showScene() {
   const preset = selected(), current = preset.scenes[Number(scene()[1]) - 1];
@@ -105,6 +146,7 @@ async function load(bytes, source) {
   const next = new PatchDocument(bytes);
   if (unsaved.size && !window.confirm('Hay cambios sin exportar. ¿Descartarlos y abrir este archivo?')) return;
   documentDraft = next; unsaved = new Set(); proposals = [];
+  recipeUndo = undefined;
   $('studioFields').disabled = false;
   $('studioPreset').replaceChildren(...next.presets.map(preset => new Option(`${preset.slot} ${preset.name}`, preset.program)));
   list.replaceChildren(...next.presets.map(preset => {
@@ -136,7 +178,7 @@ $('studioRename').onclick = () => attempt(() => { documentDraft.rename(program()
 $('studioTempo').onclick = () => attempt(() => { documentDraft.setTempo(program(), scene(), Number($('studioBpm').value)); changed(false); });
 $('studioDotted').onclick = () => attempt(() => { documentDraft.setDottedEighth(program(), scene()); changed(); note('1/8D aplicado al Digital Delay. Confirma en la NUX que TAP siga el pulso correctamente.'); });
 $('studioCopy').onclick = () => attempt(() => { documentDraft.copyScene(program(), scene(), $('studioCopyTo').value); changed(); });
-$('studioReset').onclick = () => attempt(() => { documentDraft.reset(program()); unsaved.delete(program()); proposals = []; $('studioApplyBalance').disabled = true; showScene(); window.dispatchEvent(new CustomEvent('patch-edited', { detail: selected() })); note('Preset restaurado al archivo original.'); });
+$('studioReset').onclick = () => attempt(() => { documentDraft.reset(program()); recipeUndo = undefined; unsaved.delete(program()); proposals = []; $('studioApplyBalance').disabled = true; showScene(); window.dispatchEvent(new CustomEvent('patch-edited', { detail: selected() })); note('Preset restaurado al archivo original.'); });
 async function exportBytes(bytes, name) {
   if (window.presetDesktop) return window.presetDesktop.savePatch(bytes, name);
   const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
