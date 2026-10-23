@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>QuickTone · Balance de presets</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<main>
+  <header><div><span class="eyebrow">JZ / P90 · SESIÓN DE CALIBRACIÓN</span><h1>Que cambie el tono.<br><span>Que se mantenga el nivel.</span></h1><p>El mismo riff, la misma consola. Una referencia para todos tus presets.</p></div><span id="connection" class="pill">Entrada desconectada</span></header>
+  <section class="panel setup" aria-label="Entrada de audio">
+    <div><label for="device">Entrada de audio</label><select id="device"><option value="">Predeterminada · conecta para ver las entradas</option></select></div>
+    <div><label for="channel">Canal a medir</label><select id="channel"><option value="left">Izquierdo / mono</option><option value="right">Derecho</option><option value="stereo">Estéreo · potencia media</option></select></div>
+    <button id="connect">Conectar audio</button><button id="disconnect" class="secondary" disabled>Desconectar</button>
+    <p id="inputDetails" class="small full">Selecciona la salida procesada de la MG-30 por USB. La entrada del micrófono del computador no sirve para esta comparación.</p>
+  </section>
+  <p id="status" role="status" aria-live="polite">Conecta la entrada y toca: verás el nivel en vivo. El programa no reproduce ni graba audio.</p>
+  <div class="columns">
+    <section class="panel live" aria-labelledby="liveTitle">
+      <div class="section-head"><h2 id="liveTitle">Señal en vivo</h2><span id="clip" class="pill">SIN SEÑAL</span></div>
+      <div class="readings"><div><span id="rms">—</span><small>RMS · dBFS</small></div><div><span id="peak">—</span><small>PICO · dBFS</small></div></div>
+      <meter id="levelMeter" min="-60" max="0" low="-40" high="-6" optimum="-18" value="-60" aria-label="Nivel RMS en vivo"></meter>
+      <div class="scale"><span>−60</span><span>−36</span><span>−18</span><span>−6</span><span>0 dBFS</span></div>
+      <div id="progress" class="progress"><span id="progressFill"></span></div>
+      <p id="timer" class="timer">Listo para escuchar tu guitarra</p>
+      <p class="small">RMS mide energía media, no volumen percibido exacto. Toca el mismo riff con fuerza similar y deja que entren las repeticiones del delay.</p>
+    </section>
+    <section class="panel capture" aria-labelledby="captureTitle">
+      <div class="section-head"><h2 id="captureTitle">Medir una escena</h2><span class="small">3 s de preparación + 12 s tocando</span></div>
+      <div class="form-grid"><div><label for="family">Guitarra / perfil</label><select id="family"><option>JZ</option><option>P90</option></select></div><div><label for="scene">Escena</label><select id="scene"><option>S1</option><option>S2</option><option>S3</option></select></div><div class="full"><label for="preset">Preset seleccionado en QuickTone</label><input id="preset" list="presetOptions" maxlength="79" autocomplete="off"><datalist id="presetOptions"></datalist></div><div><label for="offset">Objetivo sobre referencia · dB</label><input id="offset" type="number" min="0" max="6" step="0.5" value="0"></div><div><label for="gate">Excluir silencio bajo · dBFS</label><input id="gate" type="number" min="-80" max="-30" step="1" value="-55"></div></div>
+      <p class="small">S1/S2 parten a 0 dB; S3 propone +2 dB para destacar. El nombre se selecciona aquí manualmente.</p>
+      <div class="actions"><button id="capture" disabled>Medir esta escena</button><button id="cancel" class="secondary" disabled>Cancelar toma</button></div>
+    </section>
+  </div>
+  <section class="panel result" aria-labelledby="resultTitle"><div><span class="eyebrow">COMPARACIÓN</span><h2 id="resultTitle">Primero, fija tu referencia</h2><p id="resultText">Mide 5A JZ CLEAN FUNK y pulsa «Usar como referencia». Para P90, usa 1A con esa guitarra.</p></div><button id="reference" class="secondary" disabled>Usar última toma como referencia</button></section>
+  <section class="panel history"><div class="section-head"><div><h2>Tu mapa de niveles</h2><p id="referenceText" class="small">JZ: sin referencia · P90: sin referencia</p></div><button id="export" class="secondary" disabled>Exportar CSV</button></div><div class="table-wrap"><table><thead><tr><th>Preset / escena</th><th>RMS</th><th>Pico</th><th>Ajuste sugerido</th><th>Estado</th></tr></thead><tbody id="takes"><tr><td colspan="5" class="empty">Aquí aparecerán tus mediciones reales.</td></tr></tbody></table></div><p id="saveStatus" class="small">Las mediciones se guardan localmente; no se guarda el audio.</p></section>
+  <section class="panel patch-viewer" aria-labelledby="patchTitle"><div class="section-head"><div><span class="eyebrow">VISOR DE ARCHIVOS · SOLO LECTURA</span><h2 id="patchTitle">Tus presets, escena por escena</h2></div></div><p id="patchNotice">Elige una exportación .mg30patch de QuickTone. No se abre otra conexión MIDI.</p><label for="patchFiles">Importar uno o varios presets, o un banco completo</label><input id="patchFiles" type="file" accept=".mg30patch" multiple><div class="patch-choose"><div><label for="patchSelect">Preset del archivo</label><select id="patchSelect" disabled><option>Sin archivos cargados</option></select></div><button id="usePatch" class="secondary" disabled>Usar nombre para medir</button></div><p id="patchSource" class="small">La fecha del archivo no garantiza que coincida con la pedalera actual.</p><details><summary>Ver cadena, modelos y parámetros de S1 / S2 / S3</summary><p class="small">Valores guardados en bruto: no se convierten automáticamente a ms, Hz o dB. Amarillo indica diferencias entre escenas. Modelos sin mapear conservan sus valores RAW.</p><div class="table-wrap"><table class="patch-table"><thead><tr><th>Bloque / parámetro</th><th>S1</th><th>S2</th><th>S3</th></tr></thead><tbody id="patchRows"></tbody></table></div></details></section>
+  <footer>Deja fija la consola, el volumen de la guitarra y la entrada USB durante la comparación. Los dB sugeridos son un ajuste de nivel de salida, no puntos de Gain ni de Master.</footer>
+</main><script type="module" src="/app.mjs"></script><script type="module" src="/patch-viewer.mjs"></script>
+</body></html>

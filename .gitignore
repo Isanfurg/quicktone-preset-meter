@@ -1,0 +1,10 @@
+session.json
+session.json.tmp
+*.private.json
+*.mg30patch
+*.csv
+node_modules/
+*.log
+.env
+.DS_Store
+Thumbs.db
