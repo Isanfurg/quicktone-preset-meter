@@ -28,6 +28,8 @@ Solo está validado el formato observado de 9902 bytes por preset (tres escenas 
 
 El catálogo y la estructura de lectura se basan en el trabajo local previo de PresetLab, contrastado con exportaciones reales. No se incluyen IR, audio ni presets propietarios en el repositorio. El respaldo opcional `presets.private.json` permanece local y está excluido de Git.
 
+Para precargar tu propia exportación al abrir la página, ejecuta `node import-snapshot.mjs "ruta/al/archivo-o-carpeta"` y recarga el visor. Admite un banco completo o archivos individuales sin slots repetidos. Añade `--historical` para marcar un respaldo antiguo. Solo se genera el resumen privado de lectura; los `.mg30patch` originales no se modifican ni se publican.
+
 ### Requisitos e inicio
 
 1. Instala [Node.js](https://nodejs.org/) 20 o superior.

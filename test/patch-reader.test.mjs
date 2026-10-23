@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readPatchFile } from '../patch-reader.mjs';
+import { mkdtemp, cp, writeFile, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 function fixture(program = 29) {
   const bytes = new Uint8Array(9902);
@@ -51,4 +57,28 @@ test('unknown models and bypass are represented without inventing parameter name
   const block = readPatchFile(data)[0].scenes[0].blocks.AMP;
   assert.equal(block.enabled, false); assert.equal(block.modelId, 63);
   assert.match(block.model, /sin mapear/); assert.equal(block.parameters[0].name, 'RAW 1');
+});
+
+test('snapshot importer saves metadata, preserves source, and refuses duplicate slots', async () => {
+  const folder = await mkdtemp(path.join(tmpdir(), 'quicktone-import-test-'));
+  const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+  const run = promisify(execFile);
+  try {
+    for (const file of ['import-snapshot.mjs', 'patch-reader.mjs', 'patch-catalog.mjs']) await cp(path.join(root, file), path.join(folder, file));
+    const patch = path.join(folder, 'test.mg30patch'), original = fixture();
+    await writeFile(patch, original);
+    await run(process.execPath, ['import-snapshot.mjs', patch, '--historical'], { cwd: folder });
+    const target = path.join(folder, 'presets.private.json');
+    const saved = await readFile(target, 'utf8');
+    const snapshot = JSON.parse(saved);
+    assert.equal(snapshot.historical, true); assert.equal(snapshot.presets.length, 1);
+    assert.equal(snapshot.presets[0].slot, '08B'); assert.ok(snapshot.fileModifiedAt);
+    assert.deepEqual(new Uint8Array(await readFile(patch)), original);
+    await writeFile(path.join(folder, 'duplicate.mg30patch'), original);
+    await assert.rejects(run(process.execPath, ['import-snapshot.mjs', folder], { cwd: folder }), /Slot repetido/);
+    assert.equal(await readFile(target, 'utf8'), saved);
+  } finally {
+    if (!path.resolve(folder).startsWith(path.join(tmpdir(), 'quicktone-import-test-'))) throw new Error('Unexpected fixture path');
+    await rm(folder, { recursive: true, force: true });
+  }
 });

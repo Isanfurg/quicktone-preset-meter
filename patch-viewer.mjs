@@ -74,7 +74,13 @@ try {
     const value = await response.json();
     if (value.version === 1 && Array.isArray(value.presets) && value.presets.length <= 128) {
       entries = value.presets;
-      if (entries.length) { refresh(); $('patchNotice').textContent = 'RESPALDO HISTÓRICO: exportación del 7 de octubre de 2026. Importa una exportación nueva para ver la configuración actual.'; }
+      if (entries.length) {
+        refresh();
+        const date = value.fileModifiedAt ? new Date(value.fileModifiedAt).toLocaleString() : 'fecha anterior';
+        $('patchNotice').textContent = value.historical === false
+          ? `EXPORTACIÓN CARGADA · archivo del ${date} · ${entries.length} presets. Refleja el archivo exportado, no cambios posteriores en la NUX.`
+          : `RESPALDO HISTÓRICO · ${date}. Importa una exportación nueva para ver una fotografía más reciente de la pedalera.`;
+      }
     }
   }
 } catch { $('patchNotice').textContent = 'No se pudo cargar el respaldo local. Puedes elegir archivos exportados desde QuickTone.'; }

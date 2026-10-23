@@ -1,6 +1,7 @@
 session.json
 session.json.tmp
 *.private.json
+*.private.json.tmp
 *.mg30patch
 *.csv
 node_modules/
